@@ -2,14 +2,13 @@ import asyncio
 import sys
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from alembic import context
-
-from services.payment_api.settings import Settings
 from services.payment_api.infrastructure.models import Base
+from services.payment_api.settings import Settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -69,11 +68,7 @@ async def run_async_migrations() -> None:
 
     """
 
-    connectable = create_async_engine(
-        settings.database_url,
-        poolclass=pool.NullPool,
-        echo=False
-    )
+    connectable = create_async_engine(settings.database_url, poolclass=pool.NullPool, echo=False)
 
     try:
         async with connectable.connect() as connection:
@@ -89,7 +84,7 @@ def run_migrations_online() -> None:
         asyncio.run(run_async_migrations(), loop_factory=asyncio.SelectorEventLoop)
     else:
         asyncio.run(run_async_migrations())
-    
+
 
 if context.is_offline_mode():
     run_migrations_offline()

@@ -9,7 +9,7 @@ from services.payment_api.infrastructure.database import (
     create_database_engine,
     create_session_factory,
 )
-from services.payment_api import Settings
+from services.payment_api.settings import Settings
 
 
 class HealthResponse(BaseModel):
@@ -27,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await engine.dispose()
 
     application = FastAPI(title="FluxPay Payment API", lifespan=lifespan)
+    application.state.session_factory = session_factory
 
     @application.get("/health/live", response_model=HealthResponse, tags=["health"])
     async def liveness() -> HealthResponse:
