@@ -1,0 +1,93 @@
+from datetime import UTC, datetime
+from uuid import UUID
+from zoneinfo import ZoneInfo
+
+import pytest
+
+from services.payment_api.domain.errors import InvalidMoney, InvalidPaymentTimestamp
+from services.payment_api.domain.payment import Currency, Money, Payment, PaymentStatus
+
+
+def test_create_payment_starts_pending() -> None:
+    payment_id = UUID("f524c83a-64d6-4d5a-a7ec-1a5fcafba790")
+    timestamp = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
+    money = Money(amount_minor=3500, currency=Currency.BRL)
+
+    payment = Payment.create(money, payment_id=payment_id, occurred_at=timestamp)
+
+    assert payment.id == payment_id
+    assert payment.money == money
+    assert payment.status is PaymentStatus.PENDING
+    assert payment.created_at == timestamp
+    assert payment.updated_at == timestamp
+
+
+def test_money_rejects_zero_amount() -> None:
+    with pytest.raises(InvalidMoney):
+        Money(amount_minor=0, currency=Currency.BRL)
+
+
+def test_money_rejects_non_integer_amount() -> None:
+    with pytest.raises(InvalidMoney):
+        Money(amount_minor=3500.5, currency=Currency.BRL)
+
+
+def test_money_rejects_invalid_currency() -> None:
+    with pytest.raises(InvalidMoney):
+        Money(amount_minor=3500, currency="EUR")
+
+
+def test_create_payment_rejects_timezone_unaware_timestamp() -> None:
+    money = Money(amount_minor=3500, currency=Currency.BRL)
+
+    with pytest.raises(InvalidPaymentTimestamp):
+        Payment.create(money, occurred_at=datetime(2026, 8, 31, 12, 0).replace(tzinfo=None))
+
+
+def test_payment_rejects_naive_created_timestamp() -> None:
+    money = Money(amount_minor=3500, currency=Currency.BRL)
+
+    with pytest.raises(InvalidPaymentTimestamp):
+        Payment(
+            id=UUID("f524c83a-64d6-4d5a-a7ec-1a5fcafba790"),
+            money=money,
+            status=PaymentStatus.PENDING,
+            created_at=datetime(2026, 8, 31, 12, 0),
+            updated_at=datetime(2026, 8, 31, 12, 0, tzinfo=UTC),
+        )
+
+
+def test_payment_rejects_non_utc_timestamp() -> None:
+    money = Money(amount_minor=3500, currency=Currency.BRL)
+    timestamp = datetime(
+        2026,
+        8,
+        31,
+        12,
+        0,
+        tzinfo=ZoneInfo("America/Sao_Paulo"),
+    )
+
+    with pytest.raises(InvalidPaymentTimestamp):
+        Payment(
+            id=UUID("f524c83a-64d6-4d5a-a7ec-1a5fcafba790"),
+            money=money,
+            status=PaymentStatus.PENDING,
+            created_at=timestamp,
+            updated_at=timestamp,
+        )
+
+
+def test_payment_rejects_updated_before_created() -> None:
+    money = Money(amount_minor=3500, currency=Currency.BRL)
+    created_at = datetime(2026, 8, 31, 12, 0, tzinfo=UTC)
+    updated_at = datetime(2026, 8, 31, 11, 0, tzinfo=UTC)
+
+    with pytest.raises(InvalidPaymentTimestamp):
+        Payment(
+            id=UUID("f524c83a-64d6-4d5a-a7ec-1a5fcafba790"),
+            money=money,
+            status=PaymentStatus.PENDING,
+            created_at=created_at,
+            updated_at=updated_at,
+        )
