@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -29,12 +30,12 @@ def test_money_rejects_zero_amount() -> None:
 
 def test_money_rejects_non_integer_amount() -> None:
     with pytest.raises(InvalidMoney):
-        Money(amount_minor=3500.5, currency=Currency.BRL)
+        Money(amount_minor=cast(int, 3500.5), currency=Currency.BRL)
 
 
 def test_money_rejects_invalid_currency() -> None:
     with pytest.raises(InvalidMoney):
-        Money(amount_minor=3500, currency="EUR")
+        Money(amount_minor=3500, currency=cast(Currency, "EUR"))
 
 
 def test_create_payment_rejects_timezone_unaware_timestamp() -> None:
