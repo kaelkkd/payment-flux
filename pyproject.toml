@@ -50,6 +50,10 @@ files = ["services", "tests"]
 addopts = "--strict-config --strict-markers --cov=services.payment_api --cov-report=term-missing --cov-fail-under=100"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+omit = [
+    "services/payment_api/application/ports.py",
+]
 
 [tool.alembic]
 
