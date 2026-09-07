@@ -3,10 +3,12 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from services.payment_api.api.routes import create_payments_router
+from services.payment_api.api.schemas import ErrorCode, ErrorDetail, ErrorResponse
 from services.payment_api.application.errors import PaymentNotFound
 from services.payment_api.application.ports import PaymentUnitOfWork, PaymentUnitOfWorkFactory
 from services.payment_api.application.services import PaymentService
@@ -20,6 +22,12 @@ from services.payment_api.settings import Settings
 
 class HealthResponse(BaseModel):
     status: Literal["ok"]
+
+
+def create_error_response(*, status_code: int, code: ErrorCode, message: str) -> JSONResponse:
+    response = ErrorResponse(error=ErrorDetail(code=code, message=message))
+
+    return JSONResponse(status_code=status_code, content=response.model_dump())
 
 
 def create_app(
@@ -51,19 +59,19 @@ def create_app(
 
     @application.exception_handler(PaymentNotFound)
     async def payment_not_found(_: Request, _exc: PaymentNotFound) -> JSONResponse:
-        return JSONResponse(
-            status_code=404,
-            content={
-                "error": {
-                    "code": "PAYMENT_NOT_FOUND",
-                    "message": "Payment was not found.",
-                }
-            },
+        return create_error_response(
+            status_code=404, code="PAYMENT_NOT_FOUND", message="Payment was not found."
         )
 
     @application.get("/health/live", response_model=HealthResponse, tags=["health"])
     async def liveness() -> HealthResponse:
         return HealthResponse(status="ok")
+
+    @application.exception_handler(RequestValidationError)
+    async def invalid_request(_: Request, _exc: RequestValidationError) -> JSONResponse:
+        return create_error_response(
+            status_code=422, code="INVALID_REQUEST", message="The request is invalid."
+        )
 
     return application
 
