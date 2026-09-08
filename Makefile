@@ -22,7 +22,7 @@ test:
 ci: format-check lint typecheck test
 
 run:
-	uv run uvicorn services.payment_api.main:app --host 0.0.0.0 --port 8000
+	uv run python -m services.payment_api.run
 
 migrate:
 	uv run alembic upgrade head
